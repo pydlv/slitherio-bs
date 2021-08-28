@@ -29,7 +29,11 @@ function mapFood(food) {
 
 return {
     playing: window.playing,
-    snake: mapSnake(window.snake),
+    snake: window.snake && {
+        ...mapSnake(window.snake),
+        length: Math.floor(15 * (window.fpsls[window.snake.sct] + window.snake.fam /
+                window.fmlts[window.snake.sct] - 1) - 5)
+    },
     snakes: window.snakes.map(mapSnake),
     foods: window.foods.filter(food => food !== null && food.sz > 7).map(mapFood)
     // preys: window.preys

@@ -17,8 +17,6 @@ class Display(object):
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         pygame.display.flip()
 
-        self.center_x = 0
-        self.center_y = 0
         self.game: Optional[Game] = None
 
     def set_game(self, game: Game):
@@ -33,7 +31,7 @@ class Display(object):
         Converts absolute point to relative point
         """
         zoom = self.get_zoom()
-        return (x - self.center_x) / zoom + (WIDTH / 2), (y - self.center_y) / zoom + (HEIGHT / 2)
+        return x / zoom + (WIDTH / 2), y / zoom + (HEIGHT / 2)
 
     def point_to_rect(self, x, y, point_size=POINT_SIZE) -> pygame.Rect:
         return pygame.Rect(x, y, point_size, point_size)
@@ -49,10 +47,6 @@ class Display(object):
         # Clear the previous screen
         self.screen.fill((0, 0, 0))
 
-        # Update the current center of the screen to where our snake is
-        self.center_x = self.game.snake.x
-        self.center_y = self.game.snake.y
-
         # Draw all the snakes
         for snake in self.game.snakes:
             for point in snake.points:
@@ -61,7 +55,7 @@ class Display(object):
 
             # Draw the snake heading line
             line_start = (snake.head.x, snake.head.y)
-            line_length = 100 + 5 * snake.length
+            line_length = 100 + 5 * snake.num_points
             line_end = (
                 math.cos(snake.facing_angle) * line_length + line_start[0],
                 math.sin(snake.facing_angle) * line_length + line_start[1]
