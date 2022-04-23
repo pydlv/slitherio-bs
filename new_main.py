@@ -1,7 +1,11 @@
 import os
 
+abspath = os.path.abspath(__file__)
+dname = os.path.dirname(abspath)
+os.chdir(dname)
+
 import numpy as np
-from stable_baselines3 import TD3
+from stable_baselines3 import TD3, get_system_info
 from stable_baselines3.common.noise import NormalActionNoise
 
 from game_environment import SlitherioEnv
@@ -20,6 +24,8 @@ class CustomTD3(TD3):
 
 
 if __name__ == "__main__":
+    get_system_info()
+
     with SlitherioEnv() as env:
         n_actions = env.action_space.shape[-1]
         action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))

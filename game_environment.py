@@ -65,9 +65,12 @@ class SlitherioEnv(gym.Env):
         if reversed_angle is not None:
             self.last_snake_angle = new_angle
 
+        afk_penalty = None
+
         if is_playing:
             if self.last_snake_size is not None:
-                reward = size - self.last_snake_size - 1
+                afk_penalty = ((-0.0701453)/((size - 2.24963) ** (-0.122366)) + 0.190193) * size
+                reward = size - self.last_snake_size - afk_penalty
             else:
                 # It's the 1st turn give no reward
                 reward = 0
@@ -85,7 +88,7 @@ class SlitherioEnv(gym.Env):
             self.last_snake_size = size
 
         game_ended = not is_playing and self.last_snake_size is not None
-        if reward < -1 or reward > 0:
+        if afk_penalty is None or (reward < -afk_penalty or reward > 0):
             print("Got reward:", reward)
 
         return observation, reward, game_ended, info
