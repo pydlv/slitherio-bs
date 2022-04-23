@@ -28,7 +28,7 @@ function mapFood(food) {
 }
 
 return {
-    playing: window.playing,
+    playing: window.playing && window.dead_mtm === -1,
     snake: window.snake && {
         ...mapSnake(window.snake),
         length: Math.floor(15 * (window.fpsls[window.snake.sct] + window.snake.fam /
