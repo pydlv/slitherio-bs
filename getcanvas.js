@@ -28,13 +28,14 @@ function mapFood(food) {
 }
 
 return {
-    playing: window.playing && window.dead_mtm === -1,
+    playing: window.playing && [-1, 0].includes(window.dead_mtm),
     snake: window.snake && {
-        ...mapSnake(window.snake),
+        // ...mapSnake(window.snake),
         length: Math.floor(15 * (window.fpsls[window.snake.sct] + window.snake.fam /
-                window.fmlts[window.snake.sct] - 1) - 5)
+                window.fmlts[window.snake.sct] - 1) - 5),
+        angle: window.snake.ang
     },
-    snakes: window.snakes.map(mapSnake),
-    foods: window.foods.filter(food => food !== null && food.sz > 7).map(mapFood)
+    // snakes: window.snakes.map(mapSnake),
+    // foods: window.foods.filter(food => food !== null && food.sz > 7).map(mapFood)
     // preys: window.preys
 }

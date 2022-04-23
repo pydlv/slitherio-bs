@@ -16,7 +16,7 @@ class Snake(object):
                  color: (int, int, int),
                  points,
                  facing_angle,
-                 *, size=None):
+                 *, size=None, actual_pos_x=None, actual_pos_y=None):
         self.is_own_snake = is_own_snake
         self.x = x
         self.y = y
@@ -26,6 +26,8 @@ class Snake(object):
         self.head = self.points[-1]
         self.facing_angle = facing_angle
         self.size = size
+        self.actual_pos_x = actual_pos_x
+        self.actual_pos_y = actual_pos_y
 
 
 class Food(object):
@@ -65,7 +67,9 @@ class Game(object):
             hex_color_to_rgb(s["color"]),
             [to_relative_point(p["x"], p["y"]) for p in s["points"]],
             s["facing_angle"],
-            size=(s["length"] if is_own_snake else None)
+            size=(s["length"] if is_own_snake else None),
+            actual_pos_x=(s["x"] if is_own_snake else None),
+            actual_pos_y=(s["y"] if is_own_snake else None)
         )
 
         gd_snake = game_data["snake"]
@@ -80,7 +84,7 @@ class Game(object):
 
             if self.snake_last_size:
                 # Calculate reward and update last size
-                self.reward = self.snake.size - self.snake_last_size - 0.01
+                self.reward = self.snake.size - self.snake_last_size - 0.001
                 if self.reward < 0:
                     self.reward *= 2
 

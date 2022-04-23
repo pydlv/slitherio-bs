@@ -1,3 +1,6 @@
+import math
+
+
 def hex_color_to_rgb(hex_color: str) -> (int, int, int):
     stripped = hex_color.lstrip("#")
 
@@ -21,3 +24,9 @@ def spread(original, target_length):
         result.append(original[index])
 
     return result
+
+
+def angle_to_mouse_coords(angle):
+    x = math.cos(angle) * 1000
+    y = math.sin(angle) * 1000
+    return x, y

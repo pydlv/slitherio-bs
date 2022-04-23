@@ -1,11 +1,11 @@
-import math
 import os
 import random
-from typing import Tuple, List, Union
+import time
+from typing import Tuple
 
 import keras
 import numpy as np
-from keras import Sequential
+from keras import Sequential, backend
 from keras.layers import Dense
 from keras.optimizers import Adam
 
@@ -13,30 +13,21 @@ from game import Game, Snake
 from util import spread
 
 
-class ActionHistoryItem(object):
-    def __init__(self, state, radians: float, boost: Union[bool, int], reward: float):
-        self.state = state
-        self.radians = radians
-        self.boost = boost
-        self.reward = reward
-
-
 class SlitherBot(object):
     def __init__(self):
         self.gamma = 1.0
-        self.alpha_decay = 0.01
+        self.alpha_decay = 0
         self.epsilon_min = 0.01
-        self.epsilon = 1.0
-        self.epsilon_decay = 0.995
+        self.epsilon = 0.3
+        self.epsilon_decay = 1
+        self.learning_rate = 1e-2
 
         if os.path.isfile("./model.h5"):
             self.model = keras.models.load_model('./model.h5')
         else:
             self.model = Sequential()
-            self.model.add(Dense(691, input_dim=691, activation="relu"))
-            self.model.add(Dense(691, activation="relu"))
-            self.model.add(Dense(950, activation="relu"))
-            self.model.add(Dense(1190, activation="relu"))
+            self.model.add(Dense(150, input_dim=693, activation="relu"))
+            self.model.add(Dense(25, activation="relu"))
             # self.model.add(Dense(150, activation="relu"))
             # self.model.add(Dense(75, activation="relu"))
             # self.model.add(Dense(37, activation="relu"))
@@ -44,7 +35,9 @@ class SlitherBot(object):
             # self.model.add(Dense(8, activation="relu"))
             # self.model.add(Dense(4, activation="relu"))
             self.model.add(Dense(2, activation="sigmoid"))
-            self.model.compile(loss="mse", optimizer=Adam(lr=0.01, decay=self.alpha_decay))
+            self.model.compile(loss="mse", optimizer=Adam(lr=self.learning_rate))
+
+        backend.set_value(self.model.optimizer.lr, self.learning_rate)
 
     def __enter__(self):
         return self
@@ -72,7 +65,7 @@ class SlitherBot(object):
         closest_snakes = game.get_closest_snakes()[:10]
         closest_foods = game.get_closest_foods()[:100]
 
-        state = np.zeros(691)
+        state = np.zeros(693)
 
         # Add our snake
         state[0:39] = self.create_snake_state(game.snake)
@@ -98,38 +91,60 @@ class SlitherBot(object):
         # Add our size to state
         state[690] = game.snake.size
 
+        # Add our actual position to the state
+        state[691] = game.snake.actual_pos_x
+        state[692] = game.snake.actual_pos_y
+
+        state = np.reshape(state, [1, 693])
+
         return state
 
     def get_epsilon(self, t):
-        return max(self.epsilon_min, min(self.epsilon, 1.0 - math.log10((t + 1) * self.epsilon_decay)))
+        return self.epsilon
+        # return max(self.epsilon_min, min(self.epsilon, 1.0 - math.log10((t + 1) * self.epsilon_decay)))
 
-    def choose_action(self, inputs: List[float], epsilon: float) -> Tuple[float, bool]:
+    def choose_action(self, inputs, epsilon: float) -> Tuple[float, float]:
         """
         Returns two floats one with the angle in radians and second binary 0 or 1 whether boost is activated
         :return:
         """
         if np.random.random() <= epsilon:
-            return random.uniform(0, 1) * 2 * np.pi, random.choice((True, False))
-
-        inputs = np.reshape(inputs, [1, 691])
+            # print(time.time(), "Random action", epsilon)
+            return random.uniform(0, 1), -1
 
         o1, o2 = self.model.predict(inputs)[0]
 
-        return o1 * 2 * np.pi, bool(np.round(o2))
+        print(f"Normal action {o1}, {o2}")
 
-    def feedback(self, state, reward, done, next_state):
-        targets = [reward, reward]
-        if not done:
-            next_prediction = self.model.predict(next_state)[0]
-            targets = [
-                reward + self.gamma * j for j in next_prediction
-            ]
+        return o1, o2
+
+    def feedback(self, state, radians, boost, reward, done, next_state):
+        # Basically we want to fit it to the OPPOSITE action * reward
+        if abs(reward) > 1:
+            print("Got reward", reward)
+
+        targets = [None, min(max(boost + reward, 0), 1)]
+
+        # if done:
+        #     radians_to_use = radians
+        # else:
+        #     next_prediction = self.model.predict(next_state)[0]
+        #     radians_to_use = next_prediction[0]
+
+        radians_to_use = radians
+
+        target_radians = radians_to_use if reward > 0 else radians_to_use + 0.5
+        target_radians %= 1
+
+        targets[0] = target_radians
 
         targets_f = self.model.predict(state)
         targets_f[0][0] = targets[0]
         targets_f[0][1] = targets[1]
 
-        self.model.fit(state, targets_f)
+        print(f"Fitting to target {targets_f[0]}")
+
+        self.model.fit(state, targets_f, verbose=0)
 
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay

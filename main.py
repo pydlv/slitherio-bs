@@ -1,5 +1,4 @@
 import math
-import random
 import time
 
 from selenium import webdriver
@@ -7,16 +6,11 @@ from selenium.common.exceptions import StaleElementReferenceException
 
 from game import Game
 from gui import Display
-from network import SlitherBot, ActionHistoryItem
+from network import SlitherBot
+from util import angle_to_mouse_coords
 
 with open("getcanvas.js", "r") as f:
     canvas_script = f.read()
-
-
-def angle_to_mouse_coords(angle):
-    x = math.cos(angle) * 1000
-    y = math.sin(angle) * 1000
-    return x, y
 
 
 def loop_1000():
@@ -30,7 +24,7 @@ with webdriver.Firefox() as driver:
 
     driver.get("http://slither.io")
 
-    epsilon_loop = loop_1000()
+    thousand_loop = loop_1000()
 
     with SlitherBot() as bot:
         display = Display()
@@ -42,9 +36,9 @@ with webdriver.Firefox() as driver:
             game = Game()
             display.set_game(game)
 
-            previous_state = None
+            previous_state, previous_radians, previous_boost = None, None, None
 
-            epsilon = next(epsilon_loop)
+            epsilon = bot.get_epsilon(next(thousand_loop))
 
             while True:
                 try:
@@ -61,8 +55,12 @@ with webdriver.Firefox() as driver:
                 else:
                     if not game_data["playing"]:
                         # Provide final feedback to our bot
-                        if previous_state:
-                            bot.feedback(previous_state, -game.snake_last_size, True, None)
+                        if previous_state is not None:
+                            bot.feedback(previous_state,
+                                         previous_radians,
+                                         previous_boost,
+                                         -game.snake_last_size,
+                                         True, None)
 
                         print("Game ended.")
                         break
@@ -72,14 +70,18 @@ with webdriver.Firefox() as driver:
                     state = bot.create_state(game)
 
                     # Give feedback to our bot for the last action
-                    if previous_state:
-                        bot.feedback(previous_state, game.reward, False, state)
+                    if previous_state is not None:
+                        bot.feedback(previous_state, previous_radians, previous_boost, game.reward, False, state)
 
                     radians, boost = bot.choose_action(state, epsilon)
 
                     # Update window with bot output
-                    nx, ny = angle_to_mouse_coords(radians)
-                    driver.execute_script(f"window.xm={nx};window.ym={ny};setAcceleration({int(boost)})")
+                    nx, ny = angle_to_mouse_coords(radians * 2 * math.pi)
+                    driver.execute_script(f"window.xm={round(nx, 4)};window.ym={round(ny, 4)};setAcceleration({int(boost > 0)})")
+
+                    previous_state = state
+                    previous_radians = radians
+                    previous_boost = boost
 
                 display.update()
 
@@ -92,6 +94,8 @@ with webdriver.Firefox() as driver:
             window.dead_mtm = 0;
             window.login_fr = 0;
             window.forcing = true;
+            window.xm = Math.random();
+            window.ym = Math.random();
             if (window.force_ip && window.force_port) {
                 window.forceServer(window.force_ip, window.force_port);
             }
