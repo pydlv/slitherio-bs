@@ -1,4 +1,7 @@
 import os
+import time
+
+from common import IS_WINDOWS, LEARNING_RATE
 
 abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
@@ -32,12 +35,26 @@ if __name__ == "__main__":
 
         if os.path.exists("snake_model.zip"):
             print("Loading previous model")
-            model = CustomTD3.load("snake_model", env=env, action_noise=action_noise, verbose=1)
+            model = CustomTD3.load("snake_model", action_noise=action_noise, verbose=1, learning_rate=LEARNING_RATE)
+            model.set_env(env)
         else:
-            model = CustomTD3("CnnPolicy", env, action_noise=action_noise, verbose=1)
+            model = CustomTD3("CnnPolicy", env, action_noise=action_noise, verbose=1, learning_rate=LEARNING_RATE)
 
         # Train the agent
-        model.learn(total_timesteps=int(2e5))
+        if not IS_WINDOWS:
+            model.learn(total_timesteps=int(2e5))
+        else:
+            # Watch trained agent
+            env.reset()
 
-        # Save the agent
-        model.save("snake_model")
+            # Wait for the game to start
+            while not env.playing:
+                is_playing, size, reversed_angle = env.driver.get_game_data()
+                env.playing = is_playing
+                time.sleep(0.5)
+
+            obs = env.driver.observation()
+            while env.playing:
+                action, _states = model.predict(obs)
+
+                obs, rewards, dones, info = env.step(action)

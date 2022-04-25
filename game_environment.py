@@ -19,6 +19,7 @@ class SlitherioEnv(gym.Env):
     driver: GameDriver
     last_snake_size: Optional[int]
     last_snake_angle = 0.0
+    playing = False
 
     def __init__(self):
         super(SlitherioEnv, self).__init__()
@@ -35,11 +36,6 @@ class SlitherioEnv(gym.Env):
         self.driver = GameDriver()
 
     def step(self, action: typing.Any):
-
-        # if len(action) == 1:
-        #     # For some reason it sometimes omits the second value
-        #     d, b = action[0][0], 0.0
-        # else:
         try:
             d, b = action[0]
         except TypeError:
@@ -49,8 +45,6 @@ class SlitherioEnv(gym.Env):
         angle_adjustment = (d - 0.5) * np.pi
 
         new_angle = (self.last_snake_angle + angle_adjustment) % TWO_PI
-
-        # print(f"Setting angle to {self.last_snake_angle} + d{angle_adjustment} = {new_angle}")
 
         # New mouse coords
         nx, ny = angle_to_mouse_coords(new_angle)
@@ -62,8 +56,9 @@ class SlitherioEnv(gym.Env):
 
         is_playing, size, reversed_angle = self.driver.get_game_data()
 
-        if reversed_angle is not None:
-            self.last_snake_angle = new_angle
+        self.playing = is_playing
+
+        self.last_snake_angle = new_angle
 
         afk_penalty = None
 
